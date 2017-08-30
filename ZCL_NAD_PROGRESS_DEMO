@@ -1,0 +1,110 @@
+CLASS zcl_nad_progress_demo DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC .
+
+  PUBLIC SECTION.
+    INTERFACES /neptune/if_nad_server.
+
+    DATA:
+      ms_progress_simple TYPE zcl_nad_progress_util=>ty_progress_message_str,
+      mt_progress_table  TYPE zcl_nad_progress_util=>ty_progress_table.
+
+  PROTECTED SECTION.
+  PRIVATE SECTION.
+    DATA:
+      go_nad_progress   TYPE REF TO zcl_nad_progress_util,
+      gt_progress_table TYPE        zcl_nad_progress_util=>ty_progress_table.
+ENDCLASS.
+
+CLASS zcl_nad_progress_demo IMPLEMENTATION.
+  METHOD /neptune/if_nad_server~handle_on_ajax.
+    " Initiate the message channel for this backend session:
+    go_nad_progress = NEW zcl_nad_progress_util( iv_message_channel = 'ZMC_NAD_PROGRESS'
+                                                 iv_channel_id      = '/progress'
+                                                 iv_progress_uuid   = ajax_value ).
+
+    CASE ajax_id.
+      WHEN 'DEMO01'. " The simple message demo
+        go_nad_progress->push_progress_message( VALUE #( message = |Heavy sync started| ) ).
+
+        WAIT UP TO 2 SECONDS.
+        go_nad_progress->push_progress_message( VALUE #( message = |Creating business objects| ) ).
+
+        WAIT UP TO 2 SECONDS.
+        go_nad_progress->push_progress_message( VALUE #( message = |Updating financial information| ) ).
+
+        WAIT UP TO 1 SECONDS.
+        go_nad_progress->push_progress_message( VALUE #( message = |Waiting for the new Blade Runner movie| ) ).
+
+        WAIT UP TO 4 SECONDS.
+        go_nad_progress->push_progress_message( VALUE #( message = |All done| ) ).
+
+      WHEN 'DEMO02'.
+        " Append the first message:
+        APPEND VALUE #( message = |Heavy sync started|
+                        icon = zcl_nad_progress_util=>mc_started ) TO gt_progress_table.
+        go_nad_progress->push_progress_table( gt_progress_table ).
+        WAIT UP TO 2 SECONDS.
+
+        " Set icon for the last entry:
+        gt_progress_table[ lines( gt_progress_table ) ]-icon = zcl_nad_progress_util=>mc_success.
+        " Append next message:
+        APPEND VALUE #( message = |Creating business objects|
+                        icon = zcl_nad_progress_util=>mc_started ) TO gt_progress_table.
+        go_nad_progress->push_progress_table( gt_progress_table ).
+
+        WAIT UP TO 2 SECONDS.
+        gt_progress_table[ lines( gt_progress_table ) ]-icon = zcl_nad_progress_util=>mc_success.
+        APPEND VALUE #( message = |Updating financial information|
+                        icon = zcl_nad_progress_util=>mc_started ) TO gt_progress_table.
+        go_nad_progress->push_progress_table( gt_progress_table ).
+
+        WAIT UP TO 1 SECONDS.
+        gt_progress_table[ lines( gt_progress_table ) ]-icon = zcl_nad_progress_util=>mc_success.
+        APPEND VALUE #( message = |Waiting for the new Blade Runner movie|
+                        icon = zcl_nad_progress_util=>mc_started ) TO gt_progress_table.
+        go_nad_progress->push_progress_table( gt_progress_table ).
+
+        WAIT UP TO 4 SECONDS.
+        " Changing icon and sending without adding a new message:
+        gt_progress_table[ lines( gt_progress_table ) ]-icon = zcl_nad_progress_util=>mc_warning.
+        go_nad_progress->push_progress_table( gt_progress_table ).
+
+        WAIT UP TO 2 SECONDS.
+        gt_progress_table[ lines( gt_progress_table ) ]-icon = zcl_nad_progress_util=>mc_error.
+        APPEND VALUE #( message = |Demonstrating the table with more entries than fit one page|
+                        icon = zcl_nad_progress_util=>mc_started ) TO gt_progress_table.
+        go_nad_progress->push_progress_table( gt_progress_table ).
+
+        DO 3 TIMES.
+          WAIT UP TO 1 SECONDS.
+          gt_progress_table[ lines( gt_progress_table ) ]-icon = zcl_nad_progress_util=>mc_success.
+          APPEND VALUE #( message = |Demo { sy-index }|
+                          icon = zcl_nad_progress_util=>mc_started ) TO gt_progress_table.
+          go_nad_progress->push_progress_table( gt_progress_table ).
+
+        ENDDO.
+
+        WAIT UP TO 2 SECONDS.
+        gt_progress_table[ lines( gt_progress_table ) ]-icon = zcl_nad_progress_util=>mc_success.
+        go_nad_progress->push_progress_table( gt_progress_table ).
+
+    ENDCASE.
+  ENDMETHOD.
+
+  METHOD /neptune/if_nad_server~handle_on_request.
+  ENDMETHOD.
+
+  METHOD /neptune/if_nad_server~handle_on_response.
+  ENDMETHOD.
+
+  METHOD /neptune/if_nad_server~handle_on_submit.
+  ENDMETHOD.
+
+  METHOD /neptune/if_nad_server~handle_on_sync_in.
+  ENDMETHOD.
+
+  METHOD /neptune/if_nad_server~handle_on_sync_out.
+  ENDMETHOD.
+ENDCLASS.
