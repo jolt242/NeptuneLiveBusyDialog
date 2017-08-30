@@ -1,0 +1,79 @@
+CLASS zcl_nad_progress_util DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC .
+
+  PUBLIC SECTION.
+    TYPES:
+      BEGIN OF ty_progress_message_str,
+        uuid    TYPE string,
+        message TYPE string,
+      END OF ty_progress_message_str,
+
+      BEGIN OF ty_progress_table_str,
+        uuid    TYPE string,
+        message TYPE string,
+        icon    TYPE string,
+      END OF ty_progress_table_str,
+
+      ty_progress_table TYPE STANDARD TABLE OF ty_progress_table_str WITH EMPTY KEY.
+
+    CONSTANTS ##NO_TEXT:
+      mc_success TYPE string VALUE 'sap-icon://message-success',
+      mc_warning TYPE string VALUE 'sap-icon://message-warning',
+      mc_error   TYPE string VALUE 'sap-icon://message-error',
+      mc_started TYPE string VALUE 'sap-icon://overflow'.
+
+    METHODS:
+      constructor           IMPORTING iv_message_channel TYPE amc_application_id
+                                      iv_channel_id      TYPE amc_channel_id
+                                      iv_progress_uuid   TYPE string,
+      push_progress_message IMPORTING is_progress_message TYPE ty_progress_message_str,
+      push_progress_table   IMPORTING it_progress_table   TYPE ty_progress_table.
+
+  PROTECTED SECTION.
+  PRIVATE SECTION.
+    DATA:
+      go_producer TYPE REF TO if_amc_message_producer_text,
+      gv_uuid     TYPE        string.
+
+ENDCLASS.
+
+CLASS zcl_nad_progress_util IMPLEMENTATION.
+  METHOD constructor.
+    TRY.
+        go_producer ?= cl_amc_channel_manager=>create_message_producer( i_application_id = iv_message_channel
+                                                                        i_channel_id     = iv_channel_id ).
+        gv_uuid = iv_progress_uuid.
+
+      CATCH cx_amc_error.                               "#EC NO_HANDLER
+        " Initiating the Channel failed for some reason, but what to do? The AJAX-call must be allowed to continue as expected
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD push_progress_message.
+    DATA(ls_progress_message) = is_progress_message.
+    TRY.
+        IF go_producer IS BOUND.
+          ls_progress_message-uuid = gv_uuid.
+          go_producer->send( /ui2/cl_json=>serialize( data = ls_progress_message ) ).
+        ENDIF.
+
+      CATCH cx_amc_error.                               "#EC NO_HANDLER
+        " Sending failed for some reason, but what to do? The AJAX-call must be allowed to continue as expected
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD push_progress_table.
+    DATA(lt_progress_table) = it_progress_table.
+    TRY.
+        IF go_producer IS BOUND.
+          MODIFY lt_progress_table FROM VALUE #( uuid = gv_uuid ) TRANSPORTING uuid WHERE uuid IS INITIAL.
+          go_producer->send( /ui2/cl_json=>serialize( data = lt_progress_table ) ).
+        ENDIF.
+
+      CATCH cx_amc_error.                               "#EC NO_HANDLER
+        " Sending failed for some reason, but what to do? The AJAX-call must be allowed to continue as expected
+    ENDTRY.
+  ENDMETHOD.
+ENDCLASS.
